@@ -3,6 +3,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$Version,
   [string]$Notes = "",
+  [string]$NotesFile = "",
   [switch]$NoPublish
 )
 $ErrorActionPreference = "Stop"
@@ -50,6 +51,7 @@ if ($LASTEXITCODE -ne 0) { git commit -q -m "Release $tag" }
 git tag -a $tag -m "MOONDROP PC $tag"
 git push -q origin main
 git push -q origin $tag
+if ($NotesFile -ne "" -and (Test-Path $NotesFile)) { $Notes = [IO.File]::ReadAllText($NotesFile, [Text.Encoding]::UTF8) }
 if ($Notes -eq "") { $Notes = "MOONDROP PC $tag" }
 $nf = Join-Path $env:TEMP "moondrop_release_notes.md"
 [IO.File]::WriteAllText($nf, $Notes, (New-Object Text.UTF8Encoding $false))

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'gaia.dart';
 import 'spp_windows.dart';
-// (loadDemo usa EqBand/AncMode de gaia.dart)
+import 'window_bridge.dart';
 
 class PairedDevice {
   PairedDevice(this.name, this.mac);
@@ -54,6 +54,7 @@ class MoondropDevice extends ChangeNotifier {
       mac = (j['mac'] as String?) ?? '';
       autoConnect = (j['autoConnect'] as bool?) ?? true;
       closeToTray = (j['closeToTray'] as bool?) ?? false;
+      WindowBridge.setCloseToTray(closeToTray);
       notifyListeners();
     } catch (_) {}
   }
@@ -81,6 +82,7 @@ class MoondropDevice extends ChangeNotifier {
 
   Future<void> setCloseToTray(bool v) async {
     closeToTray = v;
+    WindowBridge.setCloseToTray(v);
     notifyListeners();
     await _saveConfig();
   }

@@ -1,4 +1,103 @@
+import 'dart:math' show pi;
+
 import 'package:flutter/material.dart';
+
+/// Ícones simples desenhados à mão (não dependem da fonte de ícones do Material).
+enum Glyph { tune, power, expand, compress, hearing }
+
+class GlyphIcon extends StatelessWidget {
+  const GlyphIcon(this.glyph, {super.key, required this.color, this.size = 24});
+
+  final Glyph glyph;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size(size, size), painter: _GlyphPainter(glyph, color));
+}
+
+class _GlyphPainter extends CustomPainter {
+  _GlyphPainter(this.glyph, this.color);
+
+  final Glyph glyph;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size s) {
+    final w = s.width;
+    final line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.09
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()..color = color;
+    switch (glyph) {
+      case Glyph.tune:
+        // três trilhos com botões (sliders)
+        for (var i = 0; i < 3; i++) {
+          final y = w * (0.24 + i * 0.26);
+          canvas.drawLine(Offset(w * 0.12, y), Offset(w * 0.88, y), line);
+          final x = w * [0.68, 0.32, 0.6][i];
+          canvas.drawCircle(Offset(x, y), w * 0.1, Paint()..color = const Color(0xFF16171B));
+          canvas.drawCircle(Offset(x, y), w * 0.1, line);
+        }
+      case Glyph.power:
+        final r = w * 0.34;
+        final c = Offset(w / 2, w * 0.54);
+        canvas.drawArc(Rect.fromCircle(center: c, radius: r), -pi * 0.32,
+            pi * 1.64, false, line);
+        canvas.drawLine(Offset(w / 2, w * 0.12), Offset(w / 2, w * 0.5), line);
+      case Glyph.expand:
+        // dois cantos apontando para fora
+        canvas.drawPath(
+            Path()
+              ..moveTo(w * 0.58, w * 0.14)
+              ..lineTo(w * 0.86, w * 0.14)
+              ..lineTo(w * 0.86, w * 0.42),
+            line);
+        canvas.drawLine(Offset(w * 0.86, w * 0.14), Offset(w * 0.56, w * 0.44), line);
+        canvas.drawPath(
+            Path()
+              ..moveTo(w * 0.42, w * 0.86)
+              ..lineTo(w * 0.14, w * 0.86)
+              ..lineTo(w * 0.14, w * 0.58),
+            line);
+        canvas.drawLine(Offset(w * 0.14, w * 0.86), Offset(w * 0.44, w * 0.56), line);
+      case Glyph.compress:
+        canvas.drawPath(
+            Path()
+              ..moveTo(w * 0.6, w * 0.4)
+              ..lineTo(w * 0.6, w * 0.15)
+              ..moveTo(w * 0.6, w * 0.4)
+              ..lineTo(w * 0.85, w * 0.4),
+            line);
+        canvas.drawPath(
+            Path()
+              ..moveTo(w * 0.4, w * 0.6)
+              ..lineTo(w * 0.4, w * 0.85)
+              ..moveTo(w * 0.4, w * 0.6)
+              ..lineTo(w * 0.15, w * 0.6),
+            line);
+        canvas.drawLine(Offset(w * 0.6, w * 0.4), Offset(w * 0.88, w * 0.12), line);
+        canvas.drawLine(Offset(w * 0.4, w * 0.6), Offset(w * 0.12, w * 0.88), line);
+      case Glyph.hearing:
+        // orelha estilizada
+        final p = Path()
+          ..moveTo(w * 0.3, w * 0.42)
+          ..cubicTo(w * 0.3, w * 0.12, w * 0.8, w * 0.1, w * 0.8, w * 0.42)
+          ..cubicTo(w * 0.8, w * 0.62, w * 0.6, w * 0.62, w * 0.6, w * 0.82)
+          ..cubicTo(w * 0.6, w * 0.95, w * 0.38, w * 0.95, w * 0.38, w * 0.8);
+        canvas.drawPath(p, line);
+        canvas.drawCircle(Offset(w * 0.55, w * 0.42), w * 0.04, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlyphPainter old) =>
+      old.glyph != glyph || old.color != color;
+}
 
 /// Ícones desenhados à mão no estilo do app oficial (anel com marca).
 enum AncGlyph { transparency, noise, off }

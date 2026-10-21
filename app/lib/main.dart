@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'device.dart';
+import 'pages/compact_panel.dart';
 import 'pages/device_page.dart';
 import 'pages/eq_page.dart';
 import 'pages/settings_page.dart';
+import 'ui/icons.dart';
 import 'ui/theme.dart';
+import 'window_bridge.dart';
 
 void main() => runApp(const MoondropApp());
 
@@ -43,6 +46,10 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
+    WindowBridge.init();
+    if (Platform.environment['MOONDROP_COMPACT'] == '1') {
+      WindowBridge.compact.value = true; // só para ver o painel compacto sem o nativo
+    }
     if (Platform.environment['MOONDROP_DEMO'] == '1') {
       dev.loadDemo(); // só para ver a interface sem fone
     } else {
@@ -61,12 +68,18 @@ class _ShellState extends State<Shell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(builder: (context, c) {
-          return c.maxWidth >= kWide ? _desktop() : _mobile();
-        }),
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: WindowBridge.compact,
+      builder: (context, compact, _) {
+        if (compact) return CompactPanel(dev: dev); // painel da bandeja
+        return Scaffold(
+          body: SafeArea(
+            child: LayoutBuilder(builder: (context, c) {
+              return c.maxWidth >= kWide ? _desktop() : _mobile();
+            }),
+          ),
+        );
+      },
     );
   }
 
@@ -174,6 +187,23 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
         const Spacer(),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: InkWell(
+            onTap: () => WindowBridge.setCompact(true),
+            borderRadius: BorderRadius.circular(14),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              child: Row(children: [
+                GlyphIcon(Glyph.compress, size: 22, color: Colors.white70),
+                SizedBox(width: 14),
+                Text('Modo compacto',
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white70)),
+              ]),
+            ),
+          ),
+        ),
         ListenableBuilder(
           listenable: dev,
           builder: (context, _) {
