@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.moondrop" "\0"
-            VALUE "FileDescription", "moondrop_pc" "\0"
+            VALUE "CompanyName", "Projeto pessoal" "\0"
+            VALUE "FileDescription", "MOONDROP PC" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "moondrop_pc" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.moondrop. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Projeto pessoal nao oficial" "\0"
             VALUE "OriginalFilename", "moondrop_pc.exe" "\0"
-            VALUE "ProductName", "moondrop_pc" "\0"
+            VALUE "ProductName", "MOONDROP PC" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

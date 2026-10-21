@@ -52,6 +52,7 @@ class _HomePageState extends State<HomePage> {
     });
     dev.loadConfig().then((_) {
       macCtl.text = dev.mac;
+      dev.startAuto();
       _scan();
     });
   }
@@ -123,6 +124,8 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 12),
                 _eqCard(),
               ],
+              const SizedBox(height: 12),
+              _settingsCard(),
             ],
           ),
         ),
@@ -203,7 +206,8 @@ class _HomePageState extends State<HomePage> {
             width: double.infinity,
             child: dev.connected
                 ? OutlinedButton(
-                    onPressed: dev.disconnect, child: const Text('Desconectar'))
+                    onPressed: () => dev.disconnect(manual: true),
+                    child: const Text('Desconectar'))
                 : FilledButton(
                     onPressed: dev.connecting || macCtl.text.trim().isEmpty
                         ? null
@@ -318,6 +322,19 @@ class _HomePageState extends State<HomePage> {
         ),
       ]),
     ];
+  }
+
+  Widget _settingsCard() {
+    return Card(
+      child: Column(children: [
+        SwitchListTile(
+          title: const Text('Conectar automaticamente'),
+          subtitle: const Text('Ao abrir o app e quando o fone ligar de novo'),
+          value: dev.autoConnect,
+          onChanged: dev.setAutoConnect,
+        ),
+      ]),
+    );
   }
 
   Widget _eqCard() {

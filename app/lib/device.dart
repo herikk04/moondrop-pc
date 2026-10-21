@@ -34,6 +34,12 @@ class MoondropDevice extends ChangeNotifier {
   double eqPreGain = 0;
   bool eqEditing = false; // enquanto o usuário arrasta um slider, a leitura não sobrescreve
 
+  // Preferências (salvas em %APPDATA%\moondrop_pc\config.json)
+  bool autoConnect = true; // conecta ao abrir e reconecta se o fone cair
+  bool closeToTray = false; // fechar a janela minimiza para a bandeja
+  Timer? _retry;
+  bool _manualOff = false; // o usuário pediu para desconectar: não reconectar sozinho
+
   // ---------------------------------------------------------------- config
   File get _cfg {
     final base = Platform.environment['APPDATA'] ?? Directory.systemTemp.path;
@@ -44,6 +50,8 @@ class MoondropDevice extends ChangeNotifier {
     try {
       final j = jsonDecode(await _cfg.readAsString()) as Map<String, dynamic>;
       mac = (j['mac'] as String?) ?? '';
+      autoConnect = (j['autoConnect'] as bool?) ?? true;
+      closeToTray = (j['closeToTray'] as bool?) ?? false;
       notifyListeners();
     } catch (_) {}
   }
@@ -51,8 +59,45 @@ class MoondropDevice extends ChangeNotifier {
   Future<void> _saveConfig() async {
     try {
       await _cfg.parent.create(recursive: true);
-      await _cfg.writeAsString(jsonEncode({'mac': mac}));
+      await _cfg.writeAsString(jsonEncode(
+          {'mac': mac, 'autoConnect': autoConnect, 'closeToTray': closeToTray}));
     } catch (_) {}
+  }
+
+  Future<void> setAutoConnect(bool v) async {
+    autoConnect = v;
+    if (!v) {
+      _retry?.cancel();
+      _retry = null;
+    } else if (!connected && mac.isNotEmpty) {
+      _manualOff = false;
+      _scheduleRetry(const Duration(seconds: 1));
+    }
+    notifyListeners();
+    await _saveConfig();
+  }
+
+  Future<void> setCloseToTray(bool v) async {
+    closeToTray = v;
+    notifyListeners();
+    await _saveConfig();
+  }
+
+  /// Chamado ao abrir o app: conecta sozinho ao último fone, se configurado.
+  void startAuto() {
+    if (autoConnect && mac.isNotEmpty && !connected && !connecting) {
+      _scheduleRetry(const Duration(milliseconds: 300));
+    }
+  }
+
+  void _scheduleRetry(Duration after) {
+    _retry?.cancel();
+    if (!autoConnect || _manualOff || mac.isEmpty) return;
+    _retry = Timer(after, () {
+      if (!connected && !connecting && autoConnect && !_manualOff) {
+        connect(mac, silent: true);
+      }
+    });
   }
 
   // ------------------------------------------------------------- descoberta
@@ -80,20 +125,25 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
   }
 
   // -------------------------------------------------------------- conexão
-  Future<void> connect(String address) async {
+  /// [silent]: tentativa automática; falhas não mostram erro (o fone pode estar desligado).
+  Future<void> connect(String address, {bool silent = false}) async {
     if (connecting) return;
     connecting = true;
-    error = null;
+    if (!silent) {
+      error = null;
+      _manualOff = false;
+    }
     mac = address.trim().toUpperCase();
     notifyListeners();
     try {
       _conn = await SppConnection.connect(mac);
       connected = true;
+      error = null;
       await _saveConfig();
       await refreshAll();
       _poll = Timer.periodic(const Duration(seconds: 4), (t) => _tick(t.tick));
     } catch (e) {
-      error = e.toString().replaceFirst('Bad state: ', '');
+      if (!silent) error = e.toString().replaceFirst('Bad state: ', '');
       await disconnect();
     } finally {
       connecting = false;
@@ -101,7 +151,13 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     }
   }
 
-  Future<void> disconnect() async {
+  /// [manual]: o usuário pediu para desconectar, então não reconecta sozinho.
+  Future<void> disconnect({bool manual = false}) async {
+    if (manual) {
+      _manualOff = true;
+      _retry?.cancel();
+      _retry = null;
+    }
     _poll?.cancel();
     _poll = null;
     _conn?.close();
@@ -114,6 +170,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     eqBands = const [];
     eqPreGain = 0;
     notifyListeners();
+    if (!manual) _scheduleRetry(const Duration(seconds: 6));
   }
 
   // ------------------------------------------------------------- comandos
@@ -351,6 +408,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
 
   @override
   void dispose() {
+    _retry?.cancel();
     _poll?.cancel();
     _conn?.close();
     super.dispose();
