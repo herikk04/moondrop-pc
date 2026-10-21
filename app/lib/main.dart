@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'device.dart';
+import 'eq_curve.dart';
 import 'gaia.dart';
 
 void main() => runApp(const MoondropApp());
@@ -359,6 +360,10 @@ class _HomePageState extends State<HomePage> {
                   ),
               ],
             ),
+          if (dev.eqBands.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            EqCurve(bands: dev.eqBands, preGainDb: dev.eqPreGain),
+          ],
           if (dev.eqBands.isNotEmpty && dev.eqActive == kCustomPreset)
             ..._customEditor(),
           if (dev.eqBands.isNotEmpty && dev.eqActive != kCustomPreset) ...[

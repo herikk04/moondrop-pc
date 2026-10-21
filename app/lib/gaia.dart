@@ -102,6 +102,15 @@ double autoPreGainDb(List<EqBand> bands, {int sampleRate = 48000}) {
   return -((peak + 0.2) * 10).round() / 10.0;
 }
 
+/// Resposta total (dB) das bandas na frequência [f], somando os filtros peaking.
+double eqCurveDb(List<EqBand> bands, double f, {int sampleRate = 48000}) {
+  var db = 0.0;
+  for (final b in bands) {
+    db += _peakingDb(f, b, sampleRate);
+  }
+  return db;
+}
+
 double _peakingDb(double f, EqBand b, int fs) {
   if (b.gainDb == 0) return 0.0;
   final a = math.pow(10, b.gainDb / 40).toDouble();
