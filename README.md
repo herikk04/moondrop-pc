@@ -10,6 +10,7 @@ Cancelamento de ruído, equalizador com editor avançado e um painel compacto na
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)
 ![Status](https://img.shields.io/badge/status-n%C3%A3o%20oficial-orange)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/herikk04/moondrop-pc?label=release)](https://github.com/herikk04/moondrop-pc/releases/latest)
 
 </div>
@@ -125,3 +126,7 @@ docs/         imagens do README
 ## Aviso
 
 Este software envia comandos ao fone (modo de ruído, equalizador). Use por sua conta e risco. Ele **não** altera o firmware. Os comandos de escrita foram validados comparando com o que o app oficial envia, mas modelos e versões de firmware diferentes podem se comportar de outro jeito.
+
+## Licença
+
+Distribuído sob a licença [MIT](LICENSE). A licença cobre o código deste repositório; as marcas citadas pertencem aos seus donos.
