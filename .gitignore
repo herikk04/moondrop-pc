@@ -5,6 +5,7 @@
 !/app/
 !/analise/
 !/prototipo/
+!/tools/
 
 # dentro de app/
 /app/build/
