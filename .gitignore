@@ -1,0 +1,25 @@
+﻿# Tudo ignorado por padrão; só entra o que está listado abaixo.
+/*
+!/.gitignore
+!/README.md
+!/app/
+!/analise/
+!/prototipo/
+
+# dentro de app/
+/app/build/
+/app/.dart_tool/
+/app/.flutter-plugins*
+/app/.packages
+
+# dentro de prototipo/
+/prototipo/.venv/
+__pycache__/
+
+# material do APK original (propriedade da Moondrop) e dados pessoais: nunca versionar
+/analise/dart_strings.txt
+/analise/strings_*.txt
+*.apk
+*.xapk
+*.so
+*.zip
