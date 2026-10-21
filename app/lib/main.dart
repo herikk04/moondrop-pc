@@ -250,6 +250,76 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Editor do preset personalizado: ganho por banda e pregain. Envia ao soltar o slider.
+  List<Widget> _customEditor() {
+    return [
+      const SizedBox(height: 12),
+      Row(children: [
+        const SizedBox(width: 92, child: Text('Pregain')),
+        Expanded(
+          child: Slider(
+            min: -12,
+            max: 0,
+            divisions: 120,
+            value: dev.eqPreGain.clamp(-12.0, 0.0),
+            label: '${dev.eqPreGain.toStringAsFixed(1)} dB',
+            onChanged: dev.editPreGainLocal,
+            onChangeEnd: (_) => dev.applyEq(),
+          ),
+        ),
+        SizedBox(
+            width: 64,
+            child: Text('${dev.eqPreGain.toStringAsFixed(1)} dB',
+                textAlign: TextAlign.end)),
+      ]),
+      for (final b in dev.eqBands)
+        Row(children: [
+          SizedBox(
+              width: 92,
+              child: Text(b.freqHz >= 1000
+                  ? '${(b.freqHz / 1000).toStringAsFixed(b.freqHz % 1000 == 0 ? 0 : 1)} kHz'
+                  : '${b.freqHz} Hz')),
+          Expanded(
+            child: Slider(
+              min: -12,
+              max: 12,
+              divisions: 240,
+              value: b.gainDb.clamp(-12.0, 12.0),
+              label: '${b.gainDb.toStringAsFixed(1)} dB',
+              onChanged: (v) => dev.editBandLocal(b.index, gainDb: v),
+              onChangeEnd: (_) => dev.applyEq(),
+            ),
+          ),
+          SizedBox(
+              width: 64,
+              child: Text('${b.gainDb.toStringAsFixed(1)} dB',
+                  textAlign: TextAlign.end)),
+        ]),
+      const SizedBox(height: 4),
+      Row(children: [
+        OutlinedButton.icon(
+          onPressed: () {
+            dev.autoPreGainLocal();
+            dev.applyEq();
+          },
+          icon: const Icon(Icons.auto_fix_high, size: 18),
+          label: const Text('Pregain automático'),
+        ),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: () {
+            for (final b in dev.eqBands) {
+              dev.editBandLocal(b.index, gainDb: 0);
+            }
+            dev.editPreGainLocal(0);
+            dev.applyEq();
+          },
+          child: const Text('Zerar'),
+        ),
+      ]),
+    ];
+  }
+
   Widget _eqCard() {
     return Card(
       child: Padding(
@@ -272,7 +342,9 @@ class _HomePageState extends State<HomePage> {
                   ),
               ],
             ),
-          if (dev.eqBands.isNotEmpty) ...[
+          if (dev.eqBands.isNotEmpty && dev.eqActive == kCustomPreset)
+            ..._customEditor(),
+          if (dev.eqBands.isNotEmpty && dev.eqActive != kCustomPreset) ...[
             const SizedBox(height: 8),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,

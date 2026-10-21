@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 /// Pacote GAIA v3 sobre RFCOMM: FF | versão | flags | len | vendor(2) | cmd(2) | payload.
@@ -20,7 +21,13 @@ class EqCmd {
   static const setActivePreset = 3;
   static const getBandCount = 4;
   static const getBands = 5;
+
+  /// SET das bandas do preset personalizado (0x3F). O fone não manda ack.
+  static const setBands = 6;
 }
+
+/// Id do preset personalizado (editável).
+const int kCustomPreset = 0x3f;
 
 /// Banda de EQ: 7 bytes [freq u16 BE][Q*4096 u16 BE][tipo u8][ganho*60 i16 BE].
 class EqBand {
@@ -31,17 +38,21 @@ class EqBand {
   final double q;
   final int type;
   final double gainDb;
+
+  EqBand copyWith({int? freqHz, double? q, int? type, double? gainDb}) => EqBand(
+      index, freqHz ?? this.freqHz, q ?? this.q, type ?? this.type, gainDb ?? this.gainDb);
 }
 
-/// Interpreta a resposta de EqCmd.getBands: [ini][fim][ganho master i16] + bandas.
-List<EqBand> parseEqBands(Uint8List p) {
-  if (p.length < 2) return const [];
+/// Interpreta a resposta de EqCmd.getBands: [ini][fim][pregain*60 i16 BE] + bandas.
+({List<EqBand> bands, double preGainDb}) parseEqBands(Uint8List p) {
+  if (p.length < 2) return (bands: const <EqBand>[], preGainDb: 0.0);
   final start = p[0];
   final end = p[1];
-  if (end < start) return const [];
+  if (end < start) return (bands: const <EqBand>[], preGainDb: 0.0);
   final n = end - start + 1;
   final off = p.length >= n * 7 + 4 ? 4 : 2;
   final bd = ByteData.sublistView(p);
+  final pre = off == 4 ? bd.getInt16(2) / 60.0 : 0.0;
   final out = <EqBand>[];
   for (var i = 0; i < n; i++) {
     final o = off + i * 7;
@@ -49,10 +60,66 @@ List<EqBand> parseEqBands(Uint8List p) {
     out.add(EqBand(start + i, bd.getUint16(o), bd.getUint16(o + 2) / 4096.0,
         p[o + 4], bd.getInt16(o + 5) / 60.0));
   }
+  return (bands: out, preGainDb: pre);
+}
+
+/// Monta os payloads de EqCmd.setBands (como o app oficial: até 7 bandas por pacote,
+/// cada um com [ini][fim][pregain*60 i16 BE] + bandas de 7 bytes).
+List<List<int>> buildEqSetPayloads(List<EqBand> bands, double preGainDb) {
+  final out = <List<int>>[];
+  final pre = (preGainDb * 60).truncate().clamp(-32768, 32767);
+  for (var s = 0; s < bands.length; s += 7) {
+    final chunk = bands.sublist(s, (s + 7).clamp(0, bands.length));
+    final b = ByteData(4 + chunk.length * 7);
+    b.setUint8(0, s);
+    b.setUint8(1, s + chunk.length - 1);
+    b.setInt16(2, pre);
+    for (var i = 0; i < chunk.length; i++) {
+      final o = 4 + i * 7;
+      final band = chunk[i];
+      b.setUint16(o, band.freqHz);
+      b.setUint16(o + 2, (band.q * 4096).truncate().clamp(0, 65535));
+      b.setUint8(o + 4, band.type);
+      b.setInt16(o + 5, (band.gainDb * 60).truncate().clamp(-32768, 32767));
+    }
+    out.add(b.buffer.asUint8List());
+  }
   return out;
 }
 
-String eqPresetName(int id) => id == 0x3f ? 'Personalizado' : 'Preset $id';
+/// Pregain automático: compensa o maior pico positivo da curva (+0,2 dB de folga).
+double autoPreGainDb(List<EqBand> bands, {int sampleRate = 48000}) {
+  var peak = 0.0;
+  for (var k = 0; k < 400; k++) {
+    final f = 20.0 * math.pow(1000.0, k / 399.0); // 20 Hz .. 20 kHz
+    var db = 0.0;
+    for (final b in bands) {
+      db += _peakingDb(f, b, sampleRate);
+    }
+    if (db > peak) peak = db;
+  }
+  if (peak <= 0) return 0.0;
+  return -((peak + 0.2) * 10).round() / 10.0;
+}
+
+double _peakingDb(double f, EqBand b, int fs) {
+  if (b.gainDb == 0) return 0.0;
+  final a = math.pow(10, b.gainDb / 40).toDouble();
+  final w0 = 2 * math.pi * b.freqHz / fs;
+  final al = math.sin(w0) / (2 * b.q);
+  final c = math.cos(w0);
+  final a0 = 1 + al / a;
+  final b0 = (1 + al * a) / a0, b1 = -2 * c / a0, b2 = (1 - al * a) / a0;
+  final a1 = -2 * c / a0, a2 = (1 - al / a) / a0;
+  final w = 2 * math.pi * f / fs;
+  final cw = math.cos(w), sw = math.sin(w), c2 = math.cos(2 * w), s2 = math.sin(2 * w);
+  final nr = b0 + b1 * cw + b2 * c2, ni = -(b1 * sw + b2 * s2);
+  final dr = 1 + a1 * cw + a2 * c2, di = -(a1 * sw + a2 * s2);
+  final num = nr * nr + ni * ni, den = dr * dr + di * di;
+  return 10 * math.log(num / den) / math.ln10;
+}
+
+String eqPresetName(int id) => id == kCustomPreset ? 'Personalizado' : 'Preset $id';
 
 enum AncMode {
   off(0, 0x01, 'Desligado'),

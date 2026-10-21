@@ -132,3 +132,15 @@ Banda (**big-endian**): `[freq u16][Q×4096 u16][tipo u8][ganho×60 i16]`. Prese
 Notificação (type=1) feature 5 cmd 0 chega quando o estado muda.
 PEQ personalizado (cmd 6/7): bloco de coeficientes Airoha em pedaços de 63 bytes (cmd 6, `[idx]+63 bytes`) e depois cmd 7 com a configuração das bandas — **não implementado**.
 Nomes dos presets não estão no APK (vêm de `/ota-config-equalizers/all` no servidor).
+
+## ✅ EQ personalizado — SET confirmado pelo log do app oficial (caminho "Bluetrum")
+O Space Travel 2 usa o caminho **Bluetrum** (`setBluetrumSetGains` no app), não o bloco de coeficientes Airoha.
+Para editar o preset personalizado (id `0x3F`):
+1. `feature 5, cmd 3` payload `[0x3F]` (seleciona o preset personalizado) — o app faz isso ao entrar na tela.
+2. `feature 5, cmd 6` (SET bandas), até 7 bandas por pacote, mesmo layout do GET (cmd 5):
+   `[ini][fim][pregain×60 i16 BE]` + N × `[freq u16 BE][Q×4096 u16 BE][tipo u8][ganho×60 i16 BE]`  (truncando como `(int)`).
+3. O fone **não manda ack** (timeout de 10 s no app) — confirmar relendo `cmd 5`.
+Exemplo real capturado (pregain −3,1; 20 Hz −2,5 dB; 20 kHz +3,0 dB; demais 0; Q=0,7068; tipo 0):
+`00 04 FF 46 | 00 14 0B 4F 00 FF 6A | 00 C8 0B 4F 00 00 00 | 07 D0 0B 4F 00 00 00 | 2E E0 0B 4F 00 00 00 | 4E 20 0B 4F 00 00 B4`
+Frequências do preset: 20, 200, 2000, 12000, 20000 Hz. O app calcula o pregain sozinho (≈ −(pico de ganho + 0,2) dB).
+O módulo Airoha (`libnative-peq`, emulado em `prototipo/peq_emu.py` e modelado em `peq_model.py` — 117/120 idênticos ao bit) **não é usado neste fone**; fica como pesquisa para modelos Airoha.

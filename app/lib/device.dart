@@ -31,6 +31,8 @@ class MoondropDevice extends ChangeNotifier {
   List<int> eqPresets = const [];
   int? eqActive;
   List<EqBand> eqBands = const [];
+  double eqPreGain = 0;
+  bool eqEditing = false; // enquanto o usuário arrasta um slider, a leitura não sobrescreve
 
   // ---------------------------------------------------------------- config
   File get _cfg {
@@ -110,6 +112,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     eqPresets = const [];
     eqActive = null;
     eqBands = const [];
+    eqPreGain = 0;
     notifyListeners();
   }
 
@@ -210,6 +213,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
         EqCmd.getActivePreset);
     if (r == null || r.payload.isEmpty) return;
     final id = r.payload[0];
+    if (eqEditing) return;
     if (!force && id == eqActive && eqBands.isNotEmpty) return;
     eqActive = id;
     final c = _response(
@@ -222,7 +226,71 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
         await _ask(GaiaFeature.musicProcessing, EqCmd.getBands, [0, count - 1]),
         GaiaFeature.musicProcessing,
         EqCmd.getBands);
-    if (b != null) eqBands = parseEqBands(b.payload);
+    if (b != null) {
+      final parsed = parseEqBands(b.payload);
+      eqBands = parsed.bands;
+      eqPreGain = parsed.preGainDb;
+    }
+  }
+
+  /// Atualiza só na tela (enquanto o slider se move); [applyEq] manda ao fone.
+  void editBandLocal(int bandIndex, {double? gainDb}) {
+    eqEditing = true;
+    eqBands = [
+      for (final b in eqBands)
+        b.index == bandIndex ? b.copyWith(gainDb: gainDb) : b
+    ];
+    notifyListeners();
+  }
+
+  void editPreGainLocal(double db) {
+    eqEditing = true;
+    eqPreGain = db;
+    notifyListeners();
+  }
+
+  /// Calcula o pregain automático para a curva atual (não envia).
+  void autoPreGainLocal() {
+    eqEditing = true;
+    eqPreGain = autoPreGainDb(eqBands);
+    notifyListeners();
+  }
+
+  /// Envia as bandas editadas ao preset personalizado (feature 5, cmd 6) e confirma relendo.
+  /// O fone não manda ack para este comando.
+  Future<void> applyEq() async {
+    if (!connected) return;
+    while (_busy) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    _busy = true;
+    final wanted = eqBands;
+    final wantedPre = eqPreGain;
+    try {
+      if (eqActive != kCustomPreset) {
+        await _ask(GaiaFeature.musicProcessing, EqCmd.setActivePreset, [kCustomPreset]);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+      for (final payload in buildEqSetPayloads(wanted, wantedPre)) {
+        await _ask(GaiaFeature.musicProcessing, EqCmd.setBands, payload);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      eqEditing = false;
+      await _readEqActive(force: true);
+      var ok = eqActive == kCustomPreset && eqBands.length == wanted.length;
+      if (ok) {
+        for (var i = 0; i < wanted.length; i++) {
+          if ((eqBands[i].gainDb - wanted[i].gainDb).abs() > 0.05) ok = false;
+        }
+      }
+      error = ok ? null : 'O fone não confirmou as bandas enviadas.';
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      eqEditing = false;
+      _busy = false;
+      notifyListeners();
+    }
   }
 
   /// Troca o preset de EQ (feature 5, cmd 3) e confirma relendo o preset ativo.
