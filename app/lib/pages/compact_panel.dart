@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../device.dart';
@@ -28,7 +30,7 @@ class CompactPanel extends StatefulWidget {
 }
 
 class _CompactPanelState extends State<CompactPanel> {
-  var tab = 0;
+  var tab = int.tryParse(Platform.environment['MOONDROP_CTAB'] ?? '') ?? 0;
 
   MoondropDevice get dev => widget.dev;
 

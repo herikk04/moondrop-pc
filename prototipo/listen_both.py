@@ -1,9 +1,9 @@
-﻿import asyncio, time, uuid
+import asyncio, time, uuid
 from bleak import BleakClient
 from winrt.windows.devices.bluetooth import BluetoothDevice, BluetoothCacheMode
 from winrt.windows.networking.sockets import StreamSocket
 from winrt.windows.storage.streams import DataReader, InputStreamOptions
-BLE="25:09:23:B6:31:8E"; CL=int("250923B631DB",16); SPP=uuid.UUID("00001101-0000-1000-8000-00805F9B34FB")
+BLE="AA:BB:CC:DD:EE:01"; CL=int("AABBCCDDEE02",16); SPP=uuid.UUID("00001101-0000-1000-8000-00805F9B34FB")
 CH={"1102":"00001102-d102-11e1-9b23-00025b00a5a5","1103":"00001103-d102-11e1-9b23-00025b00a5a5",
     "ff14":"0000ff14-0000-1000-8000-00805f9b34fb","fff1":"0000fff1-0000-1000-8000-00805f9b34fb","2a19":"00002a19-0000-1000-8000-00805f9b34fb"}
 T=time.time(); log=lambda *a: print(f"[{time.time()-T:5.1f}s]",*a,flush=True)

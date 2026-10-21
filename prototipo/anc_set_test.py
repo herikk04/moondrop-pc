@@ -1,10 +1,10 @@
-﻿import asyncio, struct, sys
+import asyncio, struct, sys
 from winrt.windows.devices.bluetooth import BluetoothDevice, BluetoothCacheMode
 from winrt.windows.devices.bluetooth.rfcomm import RfcommServiceId
 from winrt.windows.networking.sockets import StreamSocket
 from winrt.windows.storage.streams import DataWriter, DataReader, InputStreamOptions
 import uuid
-ADDR=int("25:09:23:B6:31:DB".replace(":",""),16)
+ADDR=int("AA:BB:CC:DD:EE:02".replace(":",""),16)
 GAIA=uuid.UUID("00001101-0000-1000-8000-00805F9B34FB")
 def gaia(f,t,c,p=b"",checksum=False):
     body=struct.pack(">HH",0x001D,(f<<9)|(t<<7)|c)+p

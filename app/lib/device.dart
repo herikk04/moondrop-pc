@@ -27,6 +27,7 @@ class MoondropDevice extends ChangeNotifier {
   AncMode? anc;
   List<({int id, int percent})> battery = const [];
   String? apiVersion;
+  String? deviceName; // nome exibido (usado no modo demonstração)
 
   // EQ (feature 5)
   List<int> eqPresets = const [];
@@ -107,7 +108,8 @@ class MoondropDevice extends ChangeNotifier {
   /// Dados de exemplo para ver/testar a interface sem fone (MOONDROP_DEMO=1).
   void loadDemo() {
     connected = true;
-    mac = '25:09:23:B6:31:DB';
+    mac = '00:11:22:33:44:55';
+    deviceName = 'Space Travel 2';
     apiVersion = '3.1';
     anc = AncMode.noise;
     battery = const [(id: 1, percent: 40), (id: 2, percent: 40)];

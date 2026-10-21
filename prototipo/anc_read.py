@@ -1,6 +1,6 @@
-﻿import asyncio, struct, sys
+import asyncio, struct, sys
 from bleak import BleakClient
-ADDR="25:09:23:B6:31:8E"
+ADDR="AA:BB:CC:DD:EE:01"
 CMD="00001101-d102-11e1-9b23-00025b00a5a5"; RSP="00001102-d102-11e1-9b23-00025b00a5a5"
 def pkt(f,t,c,p=b""): return struct.pack(">HH",0x001D,(f<<9)|(t<<7)|c)+p
 def dec(b):

@@ -7,6 +7,7 @@
 !/prototipo/
 !/tools/
 !/installer/
+!/docs/
 
 # dentro de app/
 /app/build/

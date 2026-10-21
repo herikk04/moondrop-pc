@@ -1,6 +1,6 @@
-﻿import asyncio, time
+import asyncio, time
 from bleak import BleakClient
-ADDR="25:09:23:B6:31:8E"
+ADDR="AA:BB:CC:DD:EE:01"
 CH={"1102":"00001102-d102-11e1-9b23-00025b00a5a5","1103":"00001103-d102-11e1-9b23-00025b00a5a5",
     "ff14":"0000ff14-0000-1000-8000-00805f9b34fb","fff1":"0000fff1-0000-1000-8000-00805f9b34fb",
     "2a19":"00002a19-0000-1000-8000-00805f9b34fb"}

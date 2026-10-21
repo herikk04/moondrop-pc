@@ -59,6 +59,7 @@ class _DevicePageState extends State<DevicePage> {
   }
 
   String get _name {
+    if (dev.deviceName != null) return dev.deviceName!;
     for (final d in paired) {
       if (d.mac.toUpperCase() == dev.mac.toUpperCase()) return d.name;
     }

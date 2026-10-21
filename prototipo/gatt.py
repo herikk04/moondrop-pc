@@ -1,6 +1,6 @@
-﻿import asyncio
+import asyncio
 from bleak import BleakClient
-ADDR="25:09:23:B6:31:8E"
+ADDR="AA:BB:CC:DD:EE:01"
 async def main():
     async with BleakClient(ADDR, timeout=25) as c:
         print("connected:", c.is_connected)

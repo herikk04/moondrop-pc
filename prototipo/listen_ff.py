@@ -1,6 +1,6 @@
-﻿import asyncio
+import asyncio
 from bleak import BleakClient
-ADDR="25:09:23:B6:31:8E"
+ADDR="AA:BB:CC:DD:EE:01"
 async def main():
     async with BleakClient(ADDR, timeout=25) as c:
         for u in ["00002a19-0000-1000-8000-00805f9b34fb","0000ff15-0000-1000-8000-00805f9b34fb"]:

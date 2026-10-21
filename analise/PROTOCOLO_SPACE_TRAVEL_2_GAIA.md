@@ -1,6 +1,6 @@
 # Space Travel 2 — protocolo GAIA v3 sobre BLE (confirmado no fone real)
 
-Endereço BLE do fone usado nos testes: `25:09:23:B6:31:8E`. Somente comandos de leitura foram enviados.
+Endereço BLE do fone usado nos testes: `AA:BB:CC:DD:EE:01`. Somente comandos de leitura foram enviados.
 
 ## GATT observado
 | Serviço | Característica | Props | Uso |
@@ -72,11 +72,11 @@ Escuta passiva de 90 s em 1102/1103/ff14/fff1/2a19 não recebeu nada (sem confir
 Hipótese: ANC deste modelo está no GAIA por **Bluetooth Clássico (SPP/RFCOMM, UUID 00001107-D102-11E1-9B23-00025B00A5A5)**, não no BLE.
 
 ## RFCOMM (Bluetooth Clássico) — testado
-- Endereço Clássico do fone: `25:09:23:B6:31:DB` (o BLE é `…:8E`). O Windows expõe RFCOMM: HFP (0x111E) e SPP genérico (0x1101); **não** anuncia 0x1107 (GAIA).
+- Endereço Clássico do fone: `AA:BB:CC:DD:EE:02` (o BLE é `…:01`). O Windows expõe RFCOMM: HFP (0x111E) e SPP genérico (0x1101); **não** anuncia 0x1107 (GAIA).
 - GAIA responde sobre SPP (0x1101), quadro: `FF | versão | flags | len | vendor u16 | cmd u16 | payload` — o fone responde com **versão 4** (`ff 04 00 len …`); aceitou requisição com versão 3 e flags 0.
 - API_VERSION → `0301`; SUPPORTED_FEATURES → mesmas 10 features do BLE. ANC_V3 (33), ANC_V2 (32), ANC (2) cmd 3 → **sem resposta** também no RFCOMM.
 - Conclusão: o ANC deste fone não está no GAIA (nem BLE nem SPP). Resta investigar `ff10`/`ff12` (BLE vendor) e HFP/AVRCP.
-- Script: `prototipo/gaia_rfcomm.py`.
+- Script de exemplo: `prototipo/gaia_rfcomm.py`.
 
 ## ANC descoberto via logcat do app (Samsung A13, adb bugreport) — 2026-10-20
 - O app conecta por **SPP (RFCOMM, 0x1101) com GAIA v3** (protocolVersion 4) e registra os plugins das 10 features.
@@ -143,4 +143,4 @@ Para editar o preset personalizado (id `0x3F`):
 Exemplo real capturado (pregain −3,1; 20 Hz −2,5 dB; 20 kHz +3,0 dB; demais 0; Q=0,7068; tipo 0):
 `00 04 FF 46 | 00 14 0B 4F 00 FF 6A | 00 C8 0B 4F 00 00 00 | 07 D0 0B 4F 00 00 00 | 2E E0 0B 4F 00 00 00 | 4E 20 0B 4F 00 00 B4`
 Frequências do preset: 20, 200, 2000, 12000, 20000 Hz. O app calcula o pregain sozinho (≈ −(pico de ganho + 0,2) dB).
-O módulo Airoha (`libnative-peq`, emulado em `prototipo/peq_emu.py` e modelado em `peq_model.py` — 117/120 idênticos ao bit) **não é usado neste fone**; fica como pesquisa para modelos Airoha.
+O caminho de coeficientes da Airoha (bloco enviado em pedaços de 63 bytes) **não é usado neste fone**; ele usa o caminho simples descrito acima.
