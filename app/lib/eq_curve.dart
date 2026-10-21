@@ -63,7 +63,7 @@ class _CurvePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const left = 34.0, bottom = 22.0, top = 4.0, right = 4.0;
+    const left = 34.0, bottom = 22.0, top = 4.0, right = 14.0;
     final w = size.width - left - right;
     final h = size.height - top - bottom;
 

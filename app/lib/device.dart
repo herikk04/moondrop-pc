@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'gaia.dart';
 import 'spp_windows.dart';
+// (loadDemo usa EqBand/AncMode de gaia.dart)
 
 class PairedDevice {
   PairedDevice(this.name, this.mac);
@@ -99,6 +100,26 @@ class MoondropDevice extends ChangeNotifier {
         connect(mac, silent: true);
       }
     });
+  }
+
+  /// Dados de exemplo para ver/testar a interface sem fone (MOONDROP_DEMO=1).
+  void loadDemo() {
+    connected = true;
+    mac = '25:09:23:B6:31:DB';
+    apiVersion = '3.1';
+    anc = AncMode.noise;
+    battery = const [(id: 1, percent: 40), (id: 2, percent: 40)];
+    eqPresets = const [0, 1, 2, 3, 4, kCustomPreset];
+    eqActive = kCustomPreset;
+    eqPreGain = -3.1;
+    eqBands = [
+      EqBand(0, 20, 0.7068, 0, -2.5),
+      EqBand(1, 200, 0.7068, 0, 4.0),
+      EqBand(2, 2000, 0.7068, 0, 0),
+      EqBand(3, 12000, 0.7068, 0, -3.0),
+      EqBand(4, 20000, 0.7068, 0, 3.0),
+    ];
+    notifyListeners();
   }
 
   // ------------------------------------------------------------- descoberta

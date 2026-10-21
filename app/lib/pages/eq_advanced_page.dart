@@ -7,22 +7,11 @@ import '../eq_curve.dart';
 import '../gaia.dart';
 import '../ui/theme.dart';
 
-/// Editor avançado do preset Personalizado (como o "Advanced Mode" do app oficial):
-/// gráfico, um slider vertical por banda e ajuste de ganho, frequência e Q da banda
-/// selecionada. As edições ficam locais até tocar em "Aplicar".
-class EqAdvancedPage extends StatefulWidget {
+/// Tela cheia do editor avançado (layout de celular / janela estreita).
+class EqAdvancedPage extends StatelessWidget {
   const EqAdvancedPage({super.key, required this.dev});
 
   final MoondropDevice dev;
-
-  @override
-  State<EqAdvancedPage> createState() => _EqAdvancedPageState();
-}
-
-class _EqAdvancedPageState extends State<EqAdvancedPage> {
-  int selected = 0;
-
-  MoondropDevice get dev => widget.dev;
 
   @override
   Widget build(BuildContext context) {
@@ -31,54 +20,124 @@ class _EqAdvancedPageState extends State<EqAdvancedPage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
-            child: ListenableBuilder(
-              listenable: dev,
-              builder: (context, _) {
-                final bands = dev.eqBands;
-                if (bands.isEmpty) {
-                  return Column(children: [
-                    McHeader('Equalizador avançado',
-                        onBack: () => Navigator.of(context).pop()),
-                    const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text('Sem bandas (fone desconectado?)')),
-                  ]);
-                }
-                final sel = bands.firstWhere((b) => b.index == selected,
-                    orElse: () => bands.first);
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
-                  children: [
-                    McHeader('Equalizador avançado',
-                        onBack: () => Navigator.of(context).pop()),
-                    const SizedBox(height: 6),
-                    EqCurve(bands: bands, preGainDb: dev.eqPreGain, selected: sel.index),
-                    const SizedBox(height: 18),
-                    _sliders(bands, sel),
-                    const SizedBox(height: 18),
-                    _bandControls(sel),
-                    const SizedBox(height: 14),
-                    _preGain(),
-                    if (dev.error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(dev.error!, style: const TextStyle(color: Mc.danger)),
-                    ],
-                    const SizedBox(height: 18),
-                    _actions(),
-                  ],
-                );
-              },
-            ),
+            child: Column(children: [
+              McHeader('Equalizador avançado', onBack: () => Navigator.of(context).pop()),
+              Expanded(child: EqAdvancedPanel(dev: dev)),
+            ]),
           ),
         ),
       ),
     );
   }
+}
 
+/// Editor avançado do preset Personalizado (como o "Advanced Mode" do app oficial):
+/// gráfico, um slider vertical por banda e ajuste de ganho, frequência e Q da banda
+/// selecionada. As edições ficam locais até tocar em "Aplicar".
+/// Com [wide] usa duas colunas (gráfico + controles à esquerda, sliders à direita).
+class EqAdvancedPanel extends StatefulWidget {
+  const EqAdvancedPanel({
+    super.key,
+    required this.dev,
+    this.wide = false,
+    this.padding = const EdgeInsets.fromLTRB(20, 8, 20, 30),
+  });
+
+  final MoondropDevice dev;
+  final bool wide;
+  final EdgeInsets padding;
+
+  @override
+  State<EqAdvancedPanel> createState() => _EqAdvancedPanelState();
+}
+
+class _EqAdvancedPanelState extends State<EqAdvancedPanel> {
+  int selected = 0;
+
+  MoondropDevice get dev => widget.dev;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: dev,
+      builder: (context, _) {
+        final bands = dev.eqBands;
+        if (bands.isEmpty) {
+          return const Padding(
+              padding: EdgeInsets.all(24), child: Text('Sem bandas (fone desconectado?)'));
+        }
+        final sel = bands.firstWhere((b) => b.index == selected, orElse: () => bands.first);
+        final curve = EqCurve(
+            bands: bands,
+            preGainDb: dev.eqPreGain,
+            selected: sel.index,
+            height: widget.wide ? 300 : 220);
+        final err = dev.error == null
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(dev.error!, style: const TextStyle(color: Mc.danger)));
+        if (widget.wide) {
+          // PC: painel largo = gráfico+controles | sliders; painel estreito = empilha,
+          // com os controles da banda em duas colunas.
+          return LayoutBuilder(builder: (context, c) {
+            if (c.maxWidth >= 860) {
+              return ListView(padding: widget.padding, children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(
+                    flex: 6,
+                    child: Column(children: [
+                      curve,
+                      const SizedBox(height: 18),
+                      _bandControls(sel),
+                      const SizedBox(height: 14),
+                      _preGain(),
+                    ]),
+                  ),
+                  const SizedBox(width: 32),
+                  Expanded(
+                    flex: 5,
+                    child: Column(children: [
+                      const SizedBox(height: 34),
+                      _sliders(bands, sel),
+                      err,
+                      const SizedBox(height: 22),
+                      _actions(),
+                    ]),
+                  ),
+                ]),
+              ]);
+            }
+            return ListView(padding: widget.padding, children: [
+              curve,
+              const SizedBox(height: 14),
+              _sliders(bands, sel, h: 170),
+              const SizedBox(height: 14),
+              _bandControlsGrid(sel),
+              err,
+              const SizedBox(height: 8),
+              _actions(),
+            ]);
+          });
+        }
+        return ListView(padding: widget.padding, children: [
+          curve,
+          const SizedBox(height: 18),
+          _sliders(bands, sel),
+          const SizedBox(height: 18),
+          _bandControls(sel),
+          const SizedBox(height: 14),
+          _preGain(),
+          err,
+          const SizedBox(height: 18),
+          _actions(),
+        ]);
+      },
+    );
+  }
   // ---------------------------------------------------------------- sliders
-  Widget _sliders(List<EqBand> bands, EqBand sel) {
-    const h = 250.0;
-    Widget scale() => const SizedBox(
+  Widget _sliders(List<EqBand> bands, EqBand sel, {double h = 250}) {
+    Widget scale() => SizedBox(
           width: 26,
           height: h,
           child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -113,6 +172,34 @@ class _EqAdvancedPageState extends State<EqAdvancedPage> {
   }
 
   // ---------------------------------------------------- controles da banda
+  /// Mesmos controles em duas colunas (painel de PC não tão largo).
+  Widget _bandControlsGrid(EqBand b) {
+    final freq = _sliderPill(
+      labelW: 92,
+      label: 'Freq.  ${b.freqHz} Hz',
+      value: math.log(b.freqHz / 20) / math.log(1000),
+      onChanged: (t) => dev.editBandLocal(b.index,
+          freqHz: (20 * math.pow(1000, t)).round().clamp(20, 20000)),
+    );
+    final q = _sliderPill(
+      labelW: 70,
+      label: 'Q  ${b.q.toStringAsFixed(2)}',
+      value: (math.log(b.q.clamp(0.1, 10.0)) - math.log(0.1)) / (math.log(10) - math.log(0.1)),
+      onChanged: (t) => dev.editBandLocal(b.index,
+          q: double.parse(
+              math.exp(math.log(0.1) + t * (math.log(10) - math.log(0.1))).toStringAsFixed(2))),
+    );
+    return Column(children: [
+      Row(children: [
+        Expanded(child: freq),
+        const SizedBox(width: 12),
+        Expanded(child: q),
+      ]),
+      const SizedBox(height: 12),
+      _preGain(),
+    ]);
+  }
+
   Widget _bandControls(EqBand b) {
     return Column(children: [
       Row(children: [
@@ -157,6 +244,7 @@ class _EqAdvancedPageState extends State<EqAdvancedPage> {
     required String label,
     required double value,
     required ValueChanged<double> onChanged,
+    double labelW = 150,
   }) {
     return Container(
       height: 60,
@@ -166,7 +254,7 @@ class _EqAdvancedPageState extends State<EqAdvancedPage> {
         border: Border.all(color: Mc.line, width: 1.6),
       ),
       child: Row(children: [
-        SizedBox(width: 150, child: Text(label, style: const TextStyle(color: Mc.sub))),
+        SizedBox(width: labelW, child: Text(label, style: const TextStyle(color: Mc.sub))),
         Expanded(
           child: Slider(value: value.clamp(0.0, 1.0), onChanged: onChanged),
         ),

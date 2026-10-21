@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../device.dart';
+import '../eq_curve.dart';
 import '../gaia.dart';
 import '../ui/icons.dart';
 import '../ui/theme.dart';
@@ -8,9 +9,12 @@ import 'eq_page.dart';
 
 /// Página principal: conexão, bateria, ANC e atalho para o EQ (como a tela "Device" do app oficial).
 class DevicePage extends StatefulWidget {
-  const DevicePage({super.key, required this.dev});
+  const DevicePage({super.key, required this.dev, this.onOpenEq});
 
   final MoondropDevice dev;
+
+  /// No layout de PC, o resumo do EQ troca para a aba Equalizador.
+  final VoidCallback? onOpenEq;
 
   @override
   State<DevicePage> createState() => _DevicePageState();
@@ -66,35 +70,97 @@ class _DevicePageState extends State<DevicePage> {
     return ListenableBuilder(
       listenable: dev,
       builder: (context, _) {
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-          children: [
-            McHeader(dev.connected ? _name : 'MOONDROP', center: true),
-            const SizedBox(height: 8),
-            if (!dev.connected) _connectCard() else _banner(),
-            if (dev.error != null) ...[
-              const SizedBox(height: 12),
-              McCard(
-                color: const Color(0xFF3A2424),
-                padding: const EdgeInsets.all(14),
-                child: Row(children: [
-                  const Icon(Icons.error_outline, color: Mc.danger),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(dev.error!)),
+        return LayoutBuilder(builder: (context, c) {
+          final wide = c.maxWidth >= 760;
+          final error = dev.error == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: McCard(
+                    color: const Color(0xFF3A2424),
+                    padding: const EdgeInsets.all(14),
+                    child: Row(children: [
+                      const Icon(Icons.error_outline, color: Mc.danger),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(dev.error!)),
+                    ]),
+                  ),
+                );
+
+          if (wide) {
+            // Layout de PC: duas colunas (dispositivo/bateria | ANC/EQ)
+            return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+              McHeader(dev.connected ? _name : 'Dispositivo'),
+              const SizedBox(height: 8),
+              if (!dev.connected)
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(children: [_connectCard(), error])),
+                )
+              else ...[
+                error,
+                const SizedBox(height: 12),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(
+                    child: Column(children: [
+                      _banner(),
+                      const SizedBox(height: 28),
+                      McCard(child: _batteryRow()),
+                    ]),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(children: [
+                      _ancCard(),
+                      const SizedBox(height: 16),
+                      _eqSummary(),
+                    ]),
+                  ),
                 ]),
-              ),
+              ],
+            ]);
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+            children: [
+              McHeader(dev.connected ? _name : 'MOONDROP', center: true),
+              const SizedBox(height: 8),
+              if (!dev.connected) _connectCard() else _banner(),
+              error,
+              if (dev.connected) ...[
+                const SizedBox(height: 22),
+                _batteryRow(),
+                const SizedBox(height: 22),
+                _ancCard(),
+                const SizedBox(height: 14),
+                _eqTile(context),
+              ],
             ],
-            if (dev.connected) ...[
-              const SizedBox(height: 22),
-              _batteryRow(),
-              const SizedBox(height: 22),
-              _ancCard(),
-              const SizedBox(height: 14),
-              _eqTile(context),
-            ],
-          ],
-        );
+          );
+        });
       },
+    );
+  }
+
+  /// Resumo do EQ no layout de PC: curva pequena + botão para abrir a aba Equalizador.
+  Widget _eqSummary() {
+    return McCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        McSectionTitle(
+          dev.eqActive == null ? 'Equalizador' : 'Equalizador · ${eqPresetName(dev.eqActive!)}',
+        ),
+        const SizedBox(height: 12),
+        if (dev.eqBands.isNotEmpty)
+          EqCurve(bands: dev.eqBands, preGainDb: dev.eqPreGain, showLegend: false, height: 170),
+        const SizedBox(height: 14),
+        Align(
+          alignment: Alignment.centerRight,
+          child: PillButton('Abrir equalizador', onTap: widget.onOpenEq),
+        ),
+      ]),
     );
   }
 
