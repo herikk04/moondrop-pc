@@ -50,6 +50,13 @@ Remove-Item $setup -Force -ErrorAction SilentlyContinue
 & $iscc "/DVersion=$Version" (Join-Path $root "installer\moondrop.iss") | Select-Object -Last 3
 if (-not (Test-Path $setup)) { throw "o instalador nao foi gerado" }
 "instalador: $setup ({0:N1} MB)" -f ((Get-Item $setup).Length / 1MB)
+
+# 3c) versao portatil de um arquivo so (extrai no temp, abre e apaga ao fechar)
+$portable = Join-Path $dist "MOONDROP_PC-v$Version-Portable.exe"
+Remove-Item $portable -Force -ErrorAction SilentlyContinue
+& $iscc "/DVersion=$Version" (Join-Path $root "installer\portable.iss") | Select-Object -Last 3
+if (-not (Test-Path $portable)) { throw "o portatil nao foi gerado" }
+"portatil: $portable ({0:N1} MB)" -f ((Get-Item $portable).Length / 1MB)
 if ($NoPublish) { return }
 
 # 4) commit da versao, tag e release
@@ -64,5 +71,5 @@ if ($NotesFile -ne "" -and (Test-Path $NotesFile)) { $Notes = [IO.File]::ReadAll
 if ($Notes -eq "") { $Notes = "MOONDROP PC $tag" }
 $nf = Join-Path $env:TEMP "moondrop_release_notes.md"
 [IO.File]::WriteAllText($nf, $Notes, (New-Object Text.UTF8Encoding $false))
-& $gh release create $tag $setup $zip --title "MOONDROP PC $tag" --notes-file $nf
+& $gh release create $tag $setup $portable $zip --title "MOONDROP PC $tag" --notes-file $nf
 Pop-Location
