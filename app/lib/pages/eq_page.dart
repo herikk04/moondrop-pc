@@ -4,9 +4,10 @@ import '../device.dart';
 import '../eq_curve.dart';
 import '../gaia.dart';
 import '../ui/theme.dart';
+import 'eq_advanced_page.dart';
 
-/// Tela "EQ Tuning": um cartão por preset com botão "Usar"; o preset ativo mostra a curva
-/// e, no Personalizado, os sliders de edição.
+/// Tela de EQ: um cartão por preset com botão "Usar"; o preset ativo mostra a curva
+/// e, no Personalizado, abre o editor avançado.
 class EqPage extends StatelessWidget {
   const EqPage({super.key, required this.dev});
 
@@ -42,7 +43,7 @@ class EqPage extends StatelessWidget {
                   if (dev.eqPresets.isEmpty)
                     const McCard(child: Text('Sem presets (fone desconectado?)')),
                   for (final id in dev.eqPresets) ...[
-                    _presetCard(id),
+                    _presetCard(context, id),
                     const SizedBox(height: 14),
                   ],
                 ],
@@ -54,7 +55,7 @@ class EqPage extends StatelessWidget {
     );
   }
 
-  Widget _presetCard(int id) {
+  Widget _presetCard(BuildContext context, int id) {
     final active = dev.eqActive == id;
     return McCard(
       padding: const EdgeInsets.fromLTRB(22, 18, 18, 18),
@@ -69,8 +70,19 @@ class EqPage extends StatelessWidget {
         ]),
         if (active && dev.eqBands.isNotEmpty) ...[
           const SizedBox(height: 14),
-          EqCurve(bands: dev.eqBands, preGainDb: dev.eqPreGain),
-          if (id == kCustomPreset) ..._editor() else ..._bandTable(),
+          EqCurve(bands: dev.eqBands, preGainDb: dev.eqPreGain, showLegend: false, height: 190),
+          if (id == kCustomPreset)
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: PillButton('Editar (modo avançado)',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => EqAdvancedPage(dev: dev)))),
+              ),
+            )
+          else
+            ..._bandTable(),
         ],
       ]),
     );
@@ -90,65 +102,6 @@ class EqPage extends StatelessWidget {
             Text('${b.gainDb.toStringAsFixed(1)} dB'),
           ]),
         ),
-    ];
-  }
-
-  List<Widget> _editor() {
-    return [
-      const SizedBox(height: 12),
-      Row(children: [
-        const SizedBox(width: 90, child: Text('Pré-ganho')),
-        Expanded(
-          child: Slider(
-            min: -12,
-            max: 0,
-            divisions: 120,
-            value: dev.eqPreGain.clamp(-12.0, 0.0),
-            onChanged: dev.editPreGainLocal,
-            onChangeEnd: (_) => dev.applyEq(),
-          ),
-        ),
-        SizedBox(
-            width: 66,
-            child: Text('${dev.eqPreGain.toStringAsFixed(1)} dB',
-                textAlign: TextAlign.end)),
-      ]),
-      for (final b in dev.eqBands)
-        Row(children: [
-          SizedBox(width: 90, child: Text(_hz(b.freqHz))),
-          Expanded(
-            child: Slider(
-              min: -12,
-              max: 12,
-              divisions: 240,
-              value: b.gainDb.clamp(-12.0, 12.0),
-              onChanged: (v) => dev.editBandLocal(b.index, gainDb: v),
-              onChangeEnd: (_) => dev.applyEq(),
-            ),
-          ),
-          SizedBox(
-              width: 66,
-              child: Text('${b.gainDb.toStringAsFixed(1)} dB',
-                  textAlign: TextAlign.end)),
-        ]),
-      const SizedBox(height: 6),
-      Row(children: [
-        PillButton('Pré-ganho automático', onTap: () {
-          dev.autoPreGainLocal();
-          dev.applyEq();
-        }),
-        const SizedBox(width: 10),
-        TextButton(
-          onPressed: () {
-            for (final b in dev.eqBands) {
-              dev.editBandLocal(b.index, gainDb: 0);
-            }
-            dev.editPreGainLocal(0);
-            dev.applyEq();
-          },
-          child: const Text('Zerar', style: TextStyle(color: Colors.white70)),
-        ),
-      ]),
     ];
   }
 

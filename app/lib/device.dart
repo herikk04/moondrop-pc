@@ -32,6 +32,7 @@ class MoondropDevice extends ChangeNotifier {
   int? eqActive;
   List<EqBand> eqBands = const [];
   double eqPreGain = 0;
+  bool eqDirty = false; // há edições locais ainda não aplicadas ao fone
   bool eqEditing = false; // enquanto o usuário arrasta um slider, a leitura não sobrescreve
 
   // Preferências (salvas em %APPDATA%\moondrop_pc\config.json)
@@ -291,17 +292,19 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
   }
 
   /// Atualiza só na tela (enquanto o slider se move); [applyEq] manda ao fone.
-  void editBandLocal(int bandIndex, {double? gainDb}) {
+  void editBandLocal(int bandIndex, {double? gainDb, int? freqHz, double? q}) {
     eqEditing = true;
+    eqDirty = true;
     eqBands = [
       for (final b in eqBands)
-        b.index == bandIndex ? b.copyWith(gainDb: gainDb) : b
+        b.index == bandIndex ? b.copyWith(gainDb: gainDb, freqHz: freqHz, q: q) : b
     ];
     notifyListeners();
   }
 
   void editPreGainLocal(double db) {
     eqEditing = true;
+    eqDirty = true;
     eqPreGain = db;
     notifyListeners();
   }
@@ -309,8 +312,27 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
   /// Calcula o pregain automático para a curva atual (não envia).
   void autoPreGainLocal() {
     eqEditing = true;
+    eqDirty = true;
     eqPreGain = autoPreGainDb(eqBands);
     notifyListeners();
+  }
+
+  /// Descarta as edições locais e relê as bandas do fone.
+  Future<void> resetEq() async {
+    if (!connected) return;
+    while (_busy) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    _busy = true;
+    try {
+      eqEditing = false;
+      eqDirty = false;
+      await _readEqActive(force: true);
+      error = null;
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
   }
 
   /// Envia as bandas editadas ao preset personalizado (feature 5, cmd 6) e confirma relendo.
@@ -337,9 +359,14 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
       var ok = eqActive == kCustomPreset && eqBands.length == wanted.length;
       if (ok) {
         for (var i = 0; i < wanted.length; i++) {
-          if ((eqBands[i].gainDb - wanted[i].gainDb).abs() > 0.05) ok = false;
+          if ((eqBands[i].gainDb - wanted[i].gainDb).abs() > 0.05 ||
+              eqBands[i].freqHz != wanted[i].freqHz ||
+              (eqBands[i].q - wanted[i].q).abs() > 0.01) {
+            ok = false;
+          }
         }
       }
+      eqDirty = !ok;
       error = ok ? null : 'O fone não confirmou as bandas enviadas.';
     } catch (e) {
       error = e.toString();
