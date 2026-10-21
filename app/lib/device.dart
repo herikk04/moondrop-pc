@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -27,6 +27,11 @@ class MoondropDevice extends ChangeNotifier {
   List<({int id, int percent})> battery = const [];
   String? apiVersion;
 
+  // EQ (feature 5)
+  List<int> eqPresets = const [];
+  int? eqActive;
+  List<EqBand> eqBands = const [];
+
   // ---------------------------------------------------------------- config
   File get _cfg {
     final base = Platform.environment['APPDATA'] ?? Directory.systemTemp.path;
@@ -49,7 +54,7 @@ class MoondropDevice extends ChangeNotifier {
   }
 
   // ------------------------------------------------------------- descoberta
-  /// Lista dispositivos Bluetooth ClÃ¡ssico pareados no Windows (nome + MAC).
+  /// Lista dispositivos Bluetooth Clássico pareados no Windows (nome + MAC).
   static Future<List<PairedDevice>> listPaired() async {
     const script = r'''
 Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
@@ -72,7 +77,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     return out;
   }
 
-  // -------------------------------------------------------------- conexÃ£o
+  // -------------------------------------------------------------- conexão
   Future<void> connect(String address) async {
     if (connecting) return;
     connecting = true;
@@ -102,6 +107,9 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     connected = false;
     anc = null;
     battery = const [];
+    eqPresets = const [];
+    eqActive = null;
+    eqBands = const [];
     notifyListeners();
   }
 
@@ -133,6 +141,8 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
       }
       await _readAnc();
       await _readBattery();
+      await _readEqPresets();
+      await _readEqActive(force: true);
     } finally {
       _busy = false;
       notifyListeners();
@@ -144,6 +154,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     _busy = true;
     try {
       await _readAnc();
+      await _readEqActive();
       if (n % 8 == 0) await _readBattery();
     } finally {
       _busy = false;
@@ -181,7 +192,68 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     battery = list;
   }
 
-  /// Define o modo de ANC. O fone nÃ£o manda ack, entÃ£o relÃª o modo depois.
+  Future<void> _readEqPresets() async {
+    final r = _response(
+        await _ask(GaiaFeature.musicProcessing, EqCmd.getPresets),
+        GaiaFeature.musicProcessing,
+        EqCmd.getPresets);
+    if (r == null || r.payload.isEmpty) return;
+    final n = r.payload[0];
+    eqPresets = r.payload.sublist(1, (1 + n).clamp(1, r.payload.length)).toList();
+  }
+
+  /// Lê o preset ativo; recarrega as bandas quando ele muda (ou com [force]).
+  Future<void> _readEqActive({bool force = false}) async {
+    final r = _response(
+        await _ask(GaiaFeature.musicProcessing, EqCmd.getActivePreset),
+        GaiaFeature.musicProcessing,
+        EqCmd.getActivePreset);
+    if (r == null || r.payload.isEmpty) return;
+    final id = r.payload[0];
+    if (!force && id == eqActive && eqBands.isNotEmpty) return;
+    eqActive = id;
+    final c = _response(
+        await _ask(GaiaFeature.musicProcessing, EqCmd.getBandCount),
+        GaiaFeature.musicProcessing,
+        EqCmd.getBandCount);
+    final count = (c != null && c.payload.isNotEmpty) ? c.payload[0] : 0;
+    if (count == 0) return;
+    final b = _response(
+        await _ask(GaiaFeature.musicProcessing, EqCmd.getBands, [0, count - 1]),
+        GaiaFeature.musicProcessing,
+        EqCmd.getBands);
+    if (b != null) eqBands = parseEqBands(b.payload);
+  }
+
+  /// Troca o preset de EQ (feature 5, cmd 3) e confirma relendo o preset ativo.
+  Future<void> setEqPreset(int id) async {
+    if (!connected) return;
+    while (_busy) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    _busy = true;
+    final before = eqActive;
+    eqActive = id; // otimista
+    notifyListeners();
+    try {
+      await _ask(GaiaFeature.musicProcessing, EqCmd.setActivePreset, [id]);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await _readEqActive(force: true);
+      if (eqActive != id) {
+        error = 'O fone não aplicou o ${eqPresetName(id)}.';
+      } else {
+        error = null;
+      }
+    } catch (e) {
+      eqActive = before;
+      error = e.toString();
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
+  /// Define o modo de ANC. O fone não manda ack, então relê o modo depois.
   Future<void> setAnc(AncMode mode) async {
     if (!connected) return;
     while (_busy) {
@@ -196,7 +268,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
       await Future<void>.delayed(const Duration(milliseconds: 600));
       await _readAnc();
       if (anc != mode) {
-        error = 'O fone nÃ£o aplicou o modo ${mode.label}.';
+        error = 'O fone não aplicou o modo ${mode.label}.';
       } else {
         error = null;
       }

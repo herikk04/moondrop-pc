@@ -120,6 +120,8 @@ class _HomePageState extends State<HomePage> {
                 _batteryCard(),
                 const SizedBox(height: 12),
                 _ancCard(),
+                const SizedBox(height: 12),
+                _eqCard(),
               ],
             ],
           ),
@@ -243,6 +245,70 @@ class _HomePageState extends State<HomePage> {
                       child: Text('${b.percent}%', textAlign: TextAlign.end)),
                 ]),
               ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _eqCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Equalizador', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          if (dev.eqPresets.isEmpty)
+            const Text('—', style: TextStyle(color: Colors.white54))
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final id in dev.eqPresets)
+                  ChoiceChip(
+                    label: Text(eqPresetName(id)),
+                    selected: dev.eqActive == id,
+                    onSelected: (_) => dev.setEqPreset(id),
+                  ),
+              ],
+            ),
+          if (dev.eqBands.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: const Text('Bandas do preset ativo'),
+              children: [
+                Table(
+                  columnWidths: const {
+                    0: FixedColumnWidth(40),
+                    1: FlexColumnWidth(),
+                    2: FlexColumnWidth(),
+                    3: FlexColumnWidth(),
+                  },
+                  children: [
+                    const TableRow(
+                      children: [
+                        Text('#', style: TextStyle(color: Colors.white54)),
+                        Text('Freq.', style: TextStyle(color: Colors.white54)),
+                        Text('Q', style: TextStyle(color: Colors.white54)),
+                        Text('Ganho', style: TextStyle(color: Colors.white54)),
+                      ],
+                    ),
+                    for (final b in dev.eqBands)
+                      TableRow(children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Text('${b.index + 1}'),
+                        ),
+                        Text('${b.freqHz} Hz'),
+                        Text(b.q.toStringAsFixed(2)),
+                        Text('${b.gainDb.toStringAsFixed(1)} dB'),
+                      ]),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ]),
       ),
     );

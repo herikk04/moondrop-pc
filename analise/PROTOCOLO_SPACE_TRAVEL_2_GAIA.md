@@ -118,3 +118,17 @@ GAIA v3 sobre SPP/RFCOMM, feature 8 (AUDIO_CURATION), **cmd 4**, payload de 1 by
 Valores 0, 3, 5..9 não têm efeito. O fone **não envia ack** (resposta vazia) — confirmar relendo o modo (cmd 3).
 Quadro: `FF 03 00 01 00 1D 10 04 <máscara>`. Testado ciclo completo (transp→ruído→off→transp→off): 5/5 OK.
 MODES_COUNT (cmd 2) → `03 36 01 00` (3 modos). Scripts: `prototipo/anc_set_verify.py` e `prototipo/anc_set_scan.py`.
+
+## EQ — MUSIC_PROCESSING (feature 5), confirmado em leitura no fone
+| cmd | Função | Pedido | Resposta |
+|---|---|---|---|
+| 0 | GET estado do EQ | — | `01` (ligado) |
+| 1 | GET presets disponíveis | — | `[n][ids…]` → `06 00 01 02 03 04 3f` |
+| 2 | GET preset ativo | — | `[id]` (observado `00`) |
+| 3 | **SET preset ativo** | `[id]` | sem ack; reler cmd 2 (visto no plugin do app, `rc2:513`) |
+| 4 | GET nº de bandas | — | `05` |
+| 5 | GET bandas | `[ini][fim]` | `[ini][fim][master i16]` + bandas de 7 bytes |
+Banda (**big-endian**): `[freq u16][Q×4096 u16][tipo u8][ganho×60 i16]`. Preset 0 observado: 20/200/2000/12000/20000 Hz, Q=0,707, ganho 0 (plano).
+Notificação (type=1) feature 5 cmd 0 chega quando o estado muda.
+PEQ personalizado (cmd 6/7): bloco de coeficientes Airoha em pedaços de 63 bytes (cmd 6, `[idx]+63 bytes`) e depois cmd 7 com a configuração das bandas — **não implementado**.
+Nomes dos presets não estão no APK (vêm de `/ota-config-equalizers/all` no servidor).

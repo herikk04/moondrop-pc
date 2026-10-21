@@ -1,12 +1,12 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 
-/// ConexÃ£o RFCOMM (SPP) usando Winsock Bluetooth direto via FFI.
-/// O trabalho bloqueante roda num isolate para nÃ£o travar a interface.
+/// Conexão RFCOMM (SPP) usando Winsock Bluetooth direto via FFI.
+/// O trabalho bloqueante roda num isolate para não travar a interface.
 class SppConnection {
   SppConnection._(this._send, this._events);
 
@@ -45,10 +45,10 @@ class SppConnection {
     return conn;
   }
 
-  /// Envia [frame] e devolve os bytes recebidos atÃ© [quietMs] sem novos dados.
+  /// Envia [frame] e devolve os bytes recebidos até [quietMs] sem novos dados.
   Future<Uint8List> request(Uint8List frame,
       {int waitMs = 1500, int quietMs = 120}) {
-    if (_closed) return Future.error(StateError('ConexÃ£o fechada'));
+    if (_closed) return Future.error(StateError('Conexão fechada'));
     final c = Completer<Uint8List>();
     _pending = c;
     _send.send(['req', frame, waitMs, quietMs]);
@@ -122,7 +122,7 @@ void _worker(SendPort main) {
     }
 
     final addr = int.parse(mac.replaceAll(RegExp('[:\\-]'), ''), radix: 16);
-    // SOCKADDR_BTH Ã© packed: family(2) btAddr(8) serviceClassId(16) port(4) = 30
+    // SOCKADDR_BTH é packed: family(2) btAddr(8) serviceClassId(16) port(4) = 30
     final sa = calloc<Uint8>(30);
     final bd = sa.asTypedList(30).buffer.asByteData();
     bd.setUint16(0, _afBth, Endian.little);

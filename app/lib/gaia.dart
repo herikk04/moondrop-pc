@@ -12,6 +12,48 @@ class GaiaFeature {
   static const battery = 13;
 }
 
+/// Comandos de MUSIC_PROCESSING (feature 5), conferidos no fone e no plugin do app.
+class EqCmd {
+  static const getState = 0;
+  static const getPresets = 1;
+  static const getActivePreset = 2;
+  static const setActivePreset = 3;
+  static const getBandCount = 4;
+  static const getBands = 5;
+}
+
+/// Banda de EQ: 7 bytes [freq u16 BE][Q*4096 u16 BE][tipo u8][ganho*60 i16 BE].
+class EqBand {
+  EqBand(this.index, this.freqHz, this.q, this.type, this.gainDb);
+
+  final int index;
+  final int freqHz;
+  final double q;
+  final int type;
+  final double gainDb;
+}
+
+/// Interpreta a resposta de EqCmd.getBands: [ini][fim][ganho master i16] + bandas.
+List<EqBand> parseEqBands(Uint8List p) {
+  if (p.length < 2) return const [];
+  final start = p[0];
+  final end = p[1];
+  if (end < start) return const [];
+  final n = end - start + 1;
+  final off = p.length >= n * 7 + 4 ? 4 : 2;
+  final bd = ByteData.sublistView(p);
+  final out = <EqBand>[];
+  for (var i = 0; i < n; i++) {
+    final o = off + i * 7;
+    if (o + 7 > p.length) break;
+    out.add(EqBand(start + i, bd.getUint16(o), bd.getUint16(o + 2) / 4096.0,
+        p[o + 4], bd.getInt16(o + 5) / 60.0));
+  }
+  return out;
+}
+
+String eqPresetName(int id) => id == 0x3f ? 'Personalizado' : 'Preset $id';
+
 enum AncMode {
   off(0, 0x01, 'Desligado'),
   noise(1, 0x02, 'Cancelamento de ruído'),
@@ -89,3 +131,4 @@ Uint8List buildCommand(int feature, int command, [List<int> payload = const []])
   }
   return (frames: frames, rest: Uint8List.fromList(buf.sublist(i)));
 }
+
