@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'device.dart';
+import 'gaia.dart';
 import 'pages/compact_panel.dart';
 import 'pages/device_page.dart';
 import 'pages/eq_page.dart';
@@ -52,6 +53,16 @@ class _ShellState extends State<Shell> {
     }
     if (Platform.environment['MOONDROP_DEMO'] == '1') {
       dev.loadDemo(); // só para ver a interface sem fone
+      if (Platform.environment['MOONDROP_SCRIPT'] == '1') {
+        // roteiro automático para gravar a animação: começa quando o painel compacto abre
+        void start() {
+          if (!WindowBridge.compact.value) return;
+          WindowBridge.compact.removeListener(start);
+          _runDemoScript();
+        }
+
+        WindowBridge.compact.addListener(start);
+      }
     } else {
       dev.loadConfig().then((_) {
         dev.startAuto();
@@ -64,6 +75,40 @@ class _ShellState extends State<Shell> {
   void dispose() {
     dev.dispose();
     super.dispose();
+  }
+
+  /// Sequência fixa de ações (modo demonstração) para gravar a animação do painel.
+  Future<void> _runDemoScript() async {
+    Future<void> wait(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
+    await wait(1200);
+    dev.setAnc(AncMode.transparency);
+    await wait(1500);
+    dev.setAnc(AncMode.off);
+    await wait(1500);
+    dev.setAnc(AncMode.noise);
+    await wait(1600);
+    CompactPanel.demoTab.value = 1; // aba do equalizador
+    await wait(1400);
+    dev.setEqPreset(1);
+    await wait(1400);
+    dev.setEqPreset(2);
+    await wait(1400);
+    dev.setEqPreset(3);
+    await wait(1400);
+    dev.setEqPreset(kCustomPreset);
+    await wait(900);
+    // arrasta o slider da banda de 200 Hz para cima e para baixo
+    for (var i = 0; i <= 20; i++) {
+      dev.editBandLocal(1, gainDb: 4.0 + i * 0.25);
+      await wait(70);
+    }
+    for (var i = 20; i >= -8; i--) {
+      dev.editBandLocal(1, gainDb: 4.0 + i * 0.25);
+      await wait(70);
+    }
+    await wait(900);
+    CompactPanel.demoTab.value = 0; // volta ao início
+    await wait(1500);
   }
 
   @override

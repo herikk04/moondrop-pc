@@ -25,6 +25,9 @@ class CompactPanel extends StatefulWidget {
 
   final MoondropDevice dev;
 
+  /// Só para o roteiro de demonstração (grava a animação do painel).
+  static final ValueNotifier<int?> demoTab = ValueNotifier<int?>(null);
+
   @override
   State<CompactPanel> createState() => _CompactPanelState();
 }
@@ -33,6 +36,23 @@ class _CompactPanelState extends State<CompactPanel> {
   var tab = int.tryParse(Platform.environment['MOONDROP_CTAB'] ?? '') ?? 0;
 
   MoondropDevice get dev => widget.dev;
+
+  void _onDemoTab() {
+    final v = CompactPanel.demoTab.value;
+    if (v != null && mounted) setState(() => tab = v);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    CompactPanel.demoTab.addListener(_onDemoTab);
+  }
+
+  @override
+  void dispose() {
+    CompactPanel.demoTab.removeListener(_onDemoTab);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

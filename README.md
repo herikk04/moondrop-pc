@@ -34,6 +34,14 @@ O app oficial da MOONDROP só existe para celular. Este projeto leva os controle
 - **Layout responsivo:** barra lateral e colunas em janela larga; coluna única em janela estreita.
 - Opção de **fechar para a bandeja** e de **conectar automaticamente**.
 
+## Painel compacto em ação
+
+<div align="center">
+
+<img src="docs/media/painel-compacto.gif" alt="Painel compacto: troca de ANC, presets do equalizador e edição de banda" width="300">
+
+</div>
+
 ## Capturas de tela
 
 | Dispositivo | Equalizador (editor avançado) |

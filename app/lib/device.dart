@@ -107,6 +107,7 @@ class MoondropDevice extends ChangeNotifier {
 
   /// Dados de exemplo para ver/testar a interface sem fone (MOONDROP_DEMO=1).
   void loadDemo() {
+    _demo = true;
     connected = true;
     mac = '00:11:22:33:44:55';
     deviceName = 'Space Travel 2';
@@ -123,6 +124,27 @@ class MoondropDevice extends ChangeNotifier {
       EqBand(3, 12000, 0.7068, 0, -3.0),
       EqBand(4, 20000, 0.7068, 0, 3.0),
     ];
+    notifyListeners();
+  }
+
+  var _demo = false;
+
+  /// No modo demonstração, cada preset mostra uma curva diferente.
+  void _applyDemoPreset(int id) {
+    const gains = <int, List<double>>{
+      0: [0, 0, 0, 0, 0],
+      1: [4.5, 3.0, 0, -1.0, 0],
+      2: [-2.0, 0, 3.5, 2.0, -1.0],
+      3: [0, 0, 1.0, 4.0, 3.0],
+      4: [3.0, -1.0, -2.0, 2.0, 4.0],
+      kCustomPreset: [-2.5, 4.0, 0, -3.0, 3.0],
+    };
+    const freqs = [20, 200, 2000, 12000, 20000];
+    final g = gains[id] ?? gains[0]!;
+    eqActive = id;
+    eqBands = [for (var i = 0; i < 5; i++) EqBand(i, freqs[i], 0.7068, 0, g[i])];
+    eqPreGain = autoPreGainDb(eqBands);
+    eqEditing = false;
     notifyListeners();
   }
 
@@ -405,6 +427,7 @@ Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
   /// Troca o preset de EQ (feature 5, cmd 3) e confirma relendo o preset ativo.
   Future<void> setEqPreset(int id) async {
     if (!connected) return;
+    if (_demo) return _applyDemoPreset(id);
     while (_busy) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
