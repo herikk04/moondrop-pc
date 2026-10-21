@@ -24,11 +24,19 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupMutex=MoondropPcPortableSetup
+
+ShowLanguageDialog=no
+DisableStartupPrompt=yes
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Messages]
+brazilianportuguese.WizardInstalling=Abrindo o MOONDROP PC
+brazilianportuguese.InstallingLabel=Aguarde um instante, o aplicativo ja vai abrir...
+english.WizardInstalling=Opening MOONDROP PC
+english.InstallingLabel=One moment, the app is about to open...
 
 [Files]
 Source: "..\dist\MOONDROP_PC\*"; DestDir: "{tmp}\MOONDROP_PC"; Flags: recursesubdirs ignoreversion
@@ -46,5 +54,5 @@ end;
 procedure EsconderAssistente;
 begin
   // o app ja esta abrindo: some com a janela do instalador enquanto ele roda
-  WizardForm.Hide;
+  if not WizardSilent then WizardForm.Hide;
 end;
