@@ -128,7 +128,13 @@ double _peakingDb(double f, EqBand b, int fs) {
   return 10 * math.log(num / den) / math.ln10;
 }
 
-String eqPresetName(int id) => id == kCustomPreset ? 'Personalizado' : 'Preset $id';
+/// Nomes dos presets. O 0 é plano ("Reference" no app oficial); os demais nomes vêm do
+/// servidor da Moondrop e ainda não foram confirmados, então aparecem como "Preset N".
+String eqPresetName(int id) => switch (id) {
+      0 => 'Reference',
+      kCustomPreset => 'Personalizado',
+      _ => 'Preset $id',
+    };
 
 enum AncMode {
   off(0, 0x01, 'Desligado'),
